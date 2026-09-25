@@ -1,0 +1,72 @@
+<!--
+	This file is part of RB.
+
+	Copyright (C) 2026 XIAPROJECTS SRL
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, version 3.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+	This source is part of the project RB:
+	01 -> Display with Synthetic vision, Autopilot and ADSB
+	02 -> Display with SixPack
+	03 -> Display with Autopilot, ADSB, Radio, Flight Computer
+	04 -> Display with EMS: Engine monitoring system
+	05 -> Display with Stratux BLE Traffic
+	06 -> Display with Android 6.25" 7" 8" 10" 10.2"
+	07 -> Display with Stratux BLE Traffic composed by RB-05 + RB-03 in the same box
+
+	Community edition will be free for all builders and personal use as defined by the licensing model
+	Dual licensing for commercial agreement is available
+	Please join Discord community
+-->
+<div ui-content-for="title">Charts</div>
+<div>&nbsp;</div>
+<div class="col-sm-12" ng-repeat="chart in charts">
+  <div class="panel-group col-sm-12" id="chart_panel_{{chart.name}}">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <select ng-model="chart.file" ng-blur="fileSelected(chart)"  style="max-width: 40%;">
+          <option ng-repeat="file in chart.files" value="{{file.path}}" ng-selected="file==chart.file">{{humanNamefile(file)}}</option>
+        </select>
+        <span>
+          <button class="btn btn-success"
+            ng-click="tableSelect(chart,chart.name, chart.file, 'mySituation', 'GPSTime', null, [{name:'GPSGroundSpeed',yAxisID:'y'},{name:'BaroPressureAltitude',yAxisID:'y1'}])">F</button>
+        </span>
+        <span>
+          <button class="btn btn-default"
+            ng-click="tableSelect(chart,chart.name, chart.file, 'mySituation', 'GPSTime', null, [{name:'Magnetometer_Z',yAxisID:'y'},{name:'Magnetometer_X',yAxisID:'y'},{name:'Magnetometer_Y',yAxisID:'y'},{name:'AHRSMagHeading',yAxisID:'y1'},{name:'GPSTrueCourse',yAxisID:'y1'}])">M</button>
+        </span>
+        <span>
+          <button class="btn btn-primary"
+            ng-click="tableSelect(chart,chart.name, chart.file, 'mySituation', 'GPSTime', null, [{name:'AHRSPitch',yAxisID:'y'},{name:'AHRSRoll',yAxisID:'y'},{name:'AHRSGLoad',yAxisID:'y1'}])">G</button>
+        </span>
+        <span>
+          <button class="btn btn-warning"
+            ng-click="tableSelect(chart,chart.name, chart.file, 'ems', 'Clock',['SensorName','SensorValue'], [{name:'enginerpm',yAxisID:'y2'},{name:'cht1',yAxisID:'y1'},{name:'cht2',yAxisID:'y1'},{name:'cht4',yAxisID:'y1'},{name:'egt1',yAxisID:'y'},{name:'egt2',yAxisID:'y'},{name:'egt3',yAxisID:'y'},{name:'oiltemperature',yAxisID:'y1'},{name:'outsidetemperature',yAxisID:'y1'}])">E</button>
+        </span>
+        <span>
+          <button class="btn btn-info"
+            ng-click="download(chart,chart.name, chart.file, 'kml')">K</button>
+        </span>        
+        <span class="label label-success pull-right" ng-show="chart.loading == true">LOADING</span>
+      </div>
+      <div class="panel-body text-center">
+        <canvas id="{{chart.name}}" class="col-sm-12" style="height: 75vh;width: 100%;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<center>
+  <button class="btn btn-primary" ng-click="appendNewChart()" >Create new chart</button>
+</center>
