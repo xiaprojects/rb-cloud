@@ -35,8 +35,17 @@
     <div class="panel panel-default">
       <div class="panel-heading">
         <span class="panel_label">{{settings.deviceId}}</span>
+        <span id="summary_progress" class="pull-right text-muted" ng-if="scan.running">
+          <i class="fa fa-spinner fa-spin"></i> Scanning {{scan.scanned}}<span ng-if="scan.logs !== null"> of {{scan.logs}}</span>
+        </span>
+        <span class="pull-right" ng-if="!scan.running && years.length">
+          {{total | number}} min in
+          <select id="summary_year" ng-model="view.year" ng-options="year for year in years" ng-change="view.picked = true; render()"></select>
+        </span>
+        <span class="pull-right text-muted" ng-if="!scan.running && !scan.error && !years.length">No flights found</span>
       </div>
-      <div class="panel-body text-center">
+      <div class="panel-body text-danger" ng-if="scan.error">Could not list the flight logs (HTTP {{scan.error}}). Check the device and token in Settings.</div>
+      <div class="panel-body text-center" ng-show="!scan.error">
        
         <div class="form-group">
          <canvas id="summary" class="col-sm-12" style="height: 75vh;"></canvas>

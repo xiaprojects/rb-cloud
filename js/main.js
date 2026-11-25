@@ -56,16 +56,22 @@ app.config(function ($stateProvider, $urlRouterProvider) {
 			controller: 'ChartsCtrl',
 			reloadOnSearch: false
 		})
+		.state('map', {
+			url: '/map',
+			templateUrl: 'plates/map.html',
+			controller: 'MapCtrl',
+			reloadOnSearch: false
+		})
 		.state('logbook', {
 			url: '/logbook',
 			templateUrl: 'plates/logbook.html',
-			controller: 'ProfessionalCtrl',
+			controller: 'LogbookCtrl',
 			reloadOnSearch: false
 		})
 		.state('engineanalisys', {
 			url: '/engineanalisys',
 			templateUrl: 'plates/engineanalisys.html',
-			controller: 'ProfessionalCtrl',
+			controller: 'EngineAnalysisCtrl',
 			reloadOnSearch: false
 		})
 		.state('maintenance', {

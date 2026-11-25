@@ -28,18 +28,258 @@
 	Dual licensing for commercial agreement is available
 	Please join Discord community
 -->
-<div ui-content-for="title">Pilot Logbook</div>
+<div ui-content-for="title">Engine Analysis</div>
 <div>&nbsp;</div>
 <div class="col-sm-12">
   <div class="panel-group">
     <div class="panel panel-default">
       <div class="panel-heading">
-        <span class="panel_label">Professional version</span>
+        <span class="panel_label">{{settings.deviceId}}</span>
+        <span id="engine_progress" class="pull-right text-muted" ng-if="scan.running">
+          <i class="fa fa-spinner fa-spin"></i> Scanning {{scan.scanned}}<span ng-if="scan.logs !== null"> of {{scan.logs}}</span>
+        </span>
       </div>
-      <div class="panel-body text-center">
-       This content will be available upon Professional subscription, please join discord channel to have more information: <a href="https://discord.gg/G4u6kjmrUG">https://discord.gg/G4u6kjmrUG</a>
-       <br/>
-       Pilot logbook
+      <div class="panel-body text-danger" ng-if="scan.error">Could not list the flight logs (HTTP {{scan.error}}). Check the device and token in Settings.</div>
+      <div class="panel-body" ng-if="!scan.error" style="display: flex; align-items: center;">
+        <!-- Top view of a 4-cylinder boxer: prop flange, crankcase, two finned cylinders per side, staggered -->
+        <svg viewBox="0 0 100 100" width="96" height="96" role="img" aria-label="4-cylinder boxer engine"
+          style="flex: none; margin-right: 16px; color: #337ab7;">
+          <g fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round">
+            <rect x="44" y="4" width="12" height="10" rx="2" />
+            <rect x="38" y="14" width="24" height="76" rx="6" fill="currentColor" fill-opacity="0.12" />
+            <g>
+              <rect x="15" y="22" width="23" height="16" />
+              <rect x="5" y="18" width="10" height="24" rx="3" fill="currentColor" fill-opacity="0.12" />
+              <path d="M21 22v16M27 22v16M33 22v16" stroke-width="2" />
+            </g>
+            <g transform="translate(0 32)">
+              <rect x="15" y="22" width="23" height="16" />
+              <rect x="5" y="18" width="10" height="24" rx="3" fill="currentColor" fill-opacity="0.12" />
+              <path d="M21 22v16M27 22v16M33 22v16" stroke-width="2" />
+            </g>
+            <g transform="translate(100 10) scale(-1 1)">
+              <rect x="15" y="22" width="23" height="16" />
+              <rect x="5" y="18" width="10" height="24" rx="3" fill="currentColor" fill-opacity="0.12" />
+              <path d="M21 22v16M27 22v16M33 22v16" stroke-width="2" />
+            </g>
+            <g transform="translate(100 42) scale(-1 1)">
+              <rect x="15" y="22" width="23" height="16" />
+              <rect x="5" y="18" width="10" height="24" rx="3" fill="currentColor" fill-opacity="0.12" />
+              <path d="M21 22v16M27 22v16M33 22v16" stroke-width="2" />
+            </g>
+          </g>
+        </svg>
+        <div>
+          <div class="text-muted">Engine working time</div>
+          <div id="engine_working" style="font-size: 32px; line-height: 1.2;">{{workingMinutes() | number:0}} min</div>
+          <div class="small text-muted">
+            {{scan.flights.length}} {{scan.flights.length === 1 ? 'flight' : 'flights'}}, each from the first GPS ground speed above {{speedThreshold}} km/h to the last drop below it
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-default" ng-if="scan.flights.length">
+      <div class="panel-heading clearfix">
+        <span class="panel_label">Engine parameters</span>
+        <select id="engine_flight" class="pull-right" ng-model="view.file" ng-change="loadEngine()"
+          ng-options="flight.file as (flight.start | date:'dd MMM yyyy HH:mm':'UTC') + ' UTC, ' + (elapsedMinutes(flight) | number:0) + ' min' for flight in scan.flights | orderBy:'-start'">
+          <option value="">Select a flight</option>
+        </select>
+      </div>
+      <div id="engine_loading" class="panel-body text-muted" ng-if="engine.loading">
+        <i class="fa fa-spinner fa-spin"></i> Loading the engine data
+      </div>
+      <div class="panel-body text-danger" ng-if="engine.error">{{engine.error}}</div>
+      <div class="panel-body text-muted" ng-if="engine.sensors && !engine.sensors.length">This flight log has no engine data.</div>
+      <div class="table-responsive" ng-if="engine.sensors.length">
+        <table id="engine_table" class="table table-striped table-condensed" style="margin-bottom: 0;">
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th class="text-right">Min</th>
+              <th class="text-right">Max</th>
+              <th class="text-right">Avg</th>
+              <th class="text-right">P95</th>
+              <th class="text-right hidden-xs">Samples</th>
+              <th class="hidden-xs">Diagnostic</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-repeat="sensor in engine.sensors" ng-if="sensor.order < engineSensorCount || view.showOther" title="{{sensor.name}}">
+              <td style="white-space: normal;">
+                {{sensor.label}} <small class="text-muted">{{sensor.unit}}</small>
+                <div class="visible-xs-block">
+                  <span class="label" ng-class="sensor.diagnostic.pass ? 'label-success' : 'label-danger'">{{sensor.diagnostic.pass ? 'PASS' : 'FAILURE'}}</span>
+                  <small class="text-muted">{{sensor.diagnostic.reason}}</small>
+                </div>
+              </td>
+              <td class="text-right">{{sensor.min === null ? '&mdash;' : (sensor.min | number:sensor.decimals)}}</td>
+              <td class="text-right">{{sensor.max === null ? '&mdash;' : (sensor.max | number:sensor.decimals)}}</td>
+              <td class="text-right">{{sensor.avg === null ? '&mdash;' : (sensor.avg | number:sensor.decimals)}}</td>
+              <td class="text-right">
+                {{sensor.p95 === null ? '&mdash;' : (sensor.p95 | number:sensor.decimals)}}
+                <span class="text-warning" ng-if="usualState(sensor) === 'above'" title="Above the usual range of this engine">&#9650;</span>
+                <span class="text-warning" ng-if="usualState(sensor) === 'below'" title="Below the usual range of this engine">&#9660;</span>
+                <div class="small hidden-xs" ng-if="usualState(sensor)" ng-class="usualState(sensor) === 'usual' ? 'text-muted' : 'text-warning'">
+                  usual {{usual[sensor.name].low | number:sensor.decimals}}&ndash;{{usual[sensor.name].high | number:sensor.decimals}}
+                </div>
+              </td>
+              <td class="text-right hidden-xs">
+                {{sensor.samples | number}}
+                <div class="small text-muted" ng-if="sensor.glitches">{{sensor.glitches | number}} skipped</div>
+              </td>
+              <td class="hidden-xs">
+                <span class="label" ng-class="sensor.diagnostic.pass ? 'label-success' : 'label-danger'">{{sensor.diagnostic.pass ? 'PASS' : 'FAILURE'}}</span>
+                <div class="small text-muted">{{sensor.diagnostic.reason}}</div>
+              </td>
+            </tr>
+            <tr ng-if="otherCount(engine.sensors)">
+              <td colspan="7">
+                <a href="" id="engine_other_toggle" ng-click="view.showOther = !view.showOther">
+                  <i class="fa" ng-class="view.showOther ? 'fa-caret-up' : 'fa-caret-down'"></i>
+                  {{view.showOther ? 'Hide' : 'Show'}} {{otherCount(engine.sensors)}} device channels (RB unit power, CPU, network)
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel-footer small text-muted" ng-if="engine.sensors.length">
+        Limits assume a direct-drive 4-cylinder boxer of the Lycoming O-360 class; check them against your engine manual.
+        P95: 95% of the readings are at or below this value.
+        Glitches (readings outside the sensor's range, or far from the median of the readings around them) are skipped;
+        a sensor with more than {{maxGlitchPercent}}% glitches fails. Other channels have no limits: only non-numeric readings are skipped.
+        &#9650;/&#9660;: the P95 is above or below its usual range in this engine's other flights (see Engine history).
+      </div>
+    </div>
+
+    <div id="engine_alerts" class="panel panel-default" ng-if="scan.flights.length && view.file">
+      <div class="panel-heading clearfix">
+        <span class="panel_label">Alerts</span>
+        <small class="text-muted">shown in flight, {{selectedFlight().start | date:'dd MMM yyyy HH:mm':'UTC'}} UTC</small>
+        <span id="engine_alerts_counts" class="pull-right" ng-if="alerts.summary.total">
+          <span ng-repeat="severity in alertSeverities" ng-if="alerts.summary[severity.key]" ng-class="severity.css" style="margin-left: 10px; white-space: nowrap;">
+            <i class="fa" ng-class="severity.icon" aria-hidden="true"></i> {{alerts.summary[severity.key]}} {{severity.label | lowercase}}
+          </span>
+          <span class="text-danger" ng-if="alerts.summary.open" style="margin-left: 10px; white-space: nowrap;">{{alerts.summary.open}} open</span>
+        </span>
+      </div>
+      <div id="engine_alerts_none" class="panel-body text-muted" ng-if="!alerts.summary">
+        No alert record for this flight: the RB display logs the alerts it shows from November 2026 on.
+      </div>
+      <div id="engine_alerts_clear" class="panel-body text-muted" ng-if="alerts.summary && !alerts.summary.total">
+        <i class="fa fa-check text-success"></i> No alert was shown during this flight.
+      </div>
+      <div id="engine_alerts_loading" class="panel-body text-muted" ng-if="alerts.loading">
+        <i class="fa fa-spinner fa-spin"></i> Loading the alerts
+      </div>
+      <div class="panel-body text-danger" ng-if="alerts.error">{{alerts.error}}</div>
+      <div class="table-responsive" ng-if="alerts.episodes.length">
+        <table id="engine_alerts_table" class="table table-striped table-condensed" style="margin-bottom: 0;">
+          <thead>
+            <tr>
+              <th><span class="hidden-xs">Severity</span></th>
+              <th>Alert</th>
+              <th>Start<br/><small>UTC</small></th>
+              <th class="text-right">Duration</th>
+              <th class="text-right hidden-xs">In alarm</th>
+              <th class="text-right hidden-xs">Reopened</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-repeat="alert in alerts.episodes" ng-init="severity = severityOf(alert)">
+              <td style="white-space: nowrap;" ng-class="severity.css">
+                <i class="fa fa-fw" ng-class="severity.icon" aria-hidden="true"></i> <span class="hidden-xs">{{severity.label}}</span><span class="sr-only visible-xs-inline">{{severity.label}}</span>
+              </td>
+              <td style="white-space: normal;">
+                {{alert.title}}
+                <div class="small text-muted" ng-if="alert.title !== alert.typeText">{{alert.typeText}}</div>
+              </td>
+              <td style="white-space: nowrap;" title="{{alert.startUptime === null ? '' : 'Device uptime ' + (alert.startUptime | number:0) + ' s'}}">
+                <span ng-if="alert.start !== null">{{alert.start | date:'HH:mm:ss':'UTC'}}</span>
+                <span class="text-muted" ng-if="alert.start === null">clock not set</span>
+                <div class="small text-muted" ng-if="alert.beforeLog">raised before the log</div>
+              </td>
+              <td class="text-right" style="white-space: nowrap;">
+                <span class="text-muted" ng-if="alert.oneShot">event</span>
+                <span class="text-danger" ng-if="alert.open" title="Still active when the log ended">open</span>
+                <span ng-if="!alert.oneShot && !alert.open">{{duration(alert.durationS)}}</span>
+              </td>
+              <td class="text-right hidden-xs">{{alert.oneShot || alert.open ? '&mdash;' : duration(alert.activeSeconds)}}</td>
+              <td class="text-right hidden-xs">{{alert.reopens ? alert.reopens + '&times;' : '&mdash;'}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel-footer small text-muted" ng-if="alerts.episodes.length">
+        One row per alert, as the display listed it, in the order they were raised.
+        Duration runs from the raise to the last time the condition was seen, including the gaps of an alert that cleared and came back within 5 minutes (Reopened);
+        In alarm leaves those gaps out. &ldquo;Event&rdquo;: a one-time message (timer, autopilot, system error).
+        &ldquo;Open&rdquo;: the alert was still active when the log ended (switch-off with an alarm on, or a log uploaded in flight).
+        Engine alert titles read rule, colour and value, e.g. CHTMAX yellow 212 (&deg;C).
+      </div>
+    </div>
+
+    <div class="panel panel-default" ng-if="scan.flights.length">
+      <div class="panel-heading clearfix">
+        <span class="panel_label">Engine history</span>
+        <span id="engine_history_progress" class="pull-right text-muted" ng-if="history.running">
+          <i class="fa fa-spinner fa-spin"></i> Analyzing {{history.analyzed}} of {{history.total}} flights
+        </span>
+        <span class="pull-right text-muted" ng-if="!history.running && history.flights.length">
+          {{history.flights.length}} flights, {{history.flights[0].start | date:'dd MMM yyyy':'UTC'}} &ndash; {{history.flights[history.flights.length - 1].start | date:'dd MMM yyyy':'UTC'}}
+        </span>
+      </div>
+      <div class="panel-body" ng-if="!history.running && history.flights.length">
+        <h5>Sensor health, flight by flight</h5>
+        <div class="table-responsive">
+          <table id="engine_health">
+            <thead>
+              <tr>
+                <th></th>
+                <th class="engine-health-month" ng-repeat="month in healthMonths track by $index">{{month}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="row in healthRows">
+                <th class="engine-health-label">{{row.label}}</th>
+                <td class="engine-health-cell" ng-repeat="cell in row.cells" ng-class="{'engine-health-selected': cell.file === view.file}"
+                  ng-style="{color: cell.color}" title="{{cell.title}}" ng-click="selectFlight(cell.file)">{{cell.symbol}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small text-muted">
+          <span ng-repeat="(key, state) in health" style="margin-right: 12px; white-space: nowrap;">
+            <b ng-style="{color: state.color}">{{state.symbol}}</b> {{state.text}}
+          </span>
+        </p>
+
+        <h5>Trends: P95 of each flight</h5>
+        <div class="row">
+          <div class="col-sm-6" ng-repeat="group in trendGroups">
+            <div class="small text-muted">{{group.profile.label}}</div>
+            <div class="engine-chart"><canvas id="engine_trend_{{group.id}}"></canvas></div>
+          </div>
+        </div>
+
+        <h5>Cooling performance: CHT against the outside air temperature</h5>
+        <div class="engine-chart" style="height: 320px;" ng-if="cooling.line"><canvas id="engine_cooling"></canvas></div>
+        <p id="engine_cooling_verdict" ng-if="coolingVerdict" ng-class="coolingVerdict.unusual ? 'text-warning' : ''">
+          <span ng-if="coolingVerdict.unusual">&#9650;</span> {{coolingVerdict.text}}
+        </p>
+        <p class="text-muted" ng-if="!cooling.line">Needs at least {{usualMinFlights}} flights with valid CHT and outside air temperature.</p>
+      </div>
+      <div class="panel-body small text-danger" ng-if="!history.running && history.failed.length">
+        Could not load the engine data of {{history.failed.length}} {{history.failed.length === 1 ? 'flight' : 'flights'}}: {{history.failed.join(', ')}}.
+      </div>
+      <div class="panel-footer small text-muted" ng-if="!history.running && history.flights.length">
+        Every flight is analyzed with the rules above; the result is kept in this browser, so only new flights are downloaded next time.
+        Trends show each flight's P95, with a gap where the sensor was missing or faulty.
+        A usual range is the middle of the other flights (median &plusmn; 3 MAD; at least &plusmn;10 &deg;C for CHT and oil, &plusmn;25 &deg;C for EGT, &plusmn;100 rpm), from {{usualMinFlights}} flights or more.
+        Cooling: a flight far above the line ran hotter than this engine usually does at that outside temperature.
+        Click a cell or a point to select its flight.
       </div>
     </div>
   </div>

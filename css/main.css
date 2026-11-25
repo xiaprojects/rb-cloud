@@ -1,0 +1,75 @@
+/* Pilot Logbook on phones: tighter cells, so the trash column fits without horizontal scrolling. */
+@media (max-width: 767px) {
+  #logbook_table > thead > tr > th,
+  #logbook_table > tbody > tr > td {
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+}
+
+/* Pilot Logbook: alert counts by severity, side by side. */
+.logbook-alert-count + .logbook-alert-count {
+  margin-left: 6px;
+}
+
+/* Flight map: full height beside the flight list from 768px up; on phones the map comes
+   first and the list follows on the page (no inner scrolling, which touch screens handle badly). */
+#map_display {
+  width: 100%;
+  height: 55vh;
+  margin-bottom: 15px;
+}
+.map-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+@media (min-width: 768px) {
+  #map_display {
+    height: calc(100vh - 120px);
+  }
+  #map_flights {
+    max-height: calc(100vh - 230px);
+    overflow-y: auto;
+  }
+}
+
+/* Engine Analysis: flight-history sensor grid (one 16px cell per flight) and chart boxes. */
+#engine_health {
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.engine-health-label {
+  font-weight: normal;
+  white-space: nowrap;
+  padding-right: 8px;
+}
+.engine-health-month {
+  width: 16px;
+  max-width: 16px;
+  overflow: visible;
+  white-space: nowrap;
+  font-weight: normal;
+  font-size: 11px;
+  color: #777;
+}
+.engine-health-cell {
+  width: 16px;
+  min-width: 16px;
+  text-align: center;
+  line-height: 20px;
+  cursor: pointer;
+}
+.engine-health-selected {
+  background-color: #e3edf9;
+}
+.engine-chart {
+  position: relative;
+  height: 220px;
+  margin-bottom: 15px;
+}

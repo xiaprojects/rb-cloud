@@ -30,12 +30,12 @@
 */
 
 angular.module('appControllers').controller('HomeCtrl', HomeCtrl); // get the main module controllers set
-HomeCtrl.$inject = ['$rootScope', '$scope', '$state', '$http', '$interval']; // Inject my dependencies
+HomeCtrl.$inject = ['$scope', '$state', '$q', 'FlightLogs']; // Inject my dependencies
 
 // create our controller function with all necessary logic
-function HomeCtrl($rootScope, $scope, $state, $http, $interval) {
+function HomeCtrl($scope, $state, $q, FlightLogs) {
 
-  $scope.settings = JSON.parse(localStorage.getItem('settings'));
+  $scope.settings = JSON.parse(localStorage.getItem('settings')) || { deviceId: "DEMO", accessToken: "DEMO" };
 
   $scope.$parent.helppage = 'plates/help.html';
 
@@ -46,16 +46,55 @@ function HomeCtrl($rootScope, $scope, $state, $http, $interval) {
   $state.get('home').onExit = function () {
   };
 
+  const stop = $q.defer();
+  $scope.scan = FlightLogs.scan($scope.settings, stop.promise);
 
-  setTimeout(function () {
+  // The chart shows one year: the latest year with a flight, until the user picks one.
+  $scope.years = [];
+  $scope.view = { year: new Date().getUTCFullYear(), picked: false };
+  $scope.total = 0;
 
-    new Chart(document.getElementById("summary"), {
+  // Minutes flown in each month (UTC) of the selected year, from flightElapsedMinutes.
+  // A flight counts in the month it started.
+  function minutesPerMonth() {
+    const minutes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    $scope.scan.flights.forEach(function (flight) {
+      const start = new Date(flight.start);
+      if (start.getUTCFullYear() === $scope.view.year) {
+        minutes[start.getUTCMonth()] += flightElapsedMinutes(flight);
+      }
+    });
+    return minutes;
+  }
+
+  let chart = null;
+
+  $scope.render = function () {
+    const minutes = minutesPerMonth();
+    $scope.total = Math.round(minutes.reduce(function (sum, value) { return sum + value; }, 0));
+    if (chart) {
+      chart.data.datasets[0].data = minutes.map(Math.round);
+      chart.update();
+    }
+  };
+
+  $scope.$watchCollection('scan.flights', function (flights) {
+    $scope.years = flights.map(function (flight) { return new Date(flight.start).getUTCFullYear(); })
+      .filter(function (year, i, years) { return years.indexOf(year) === i; })
+      .sort(function (a, b) { return b - a; });
+    if (!$scope.view.picked && $scope.years.length) $scope.view.year = $scope.years[0];
+    $scope.render();
+  });
+
+  const timer = setTimeout(function () {
+
+    chart = new Chart(document.getElementById("summary"), {
       type: 'bar',
       data: {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
         datasets: [{
-          label: "Flight hours",
-          data: [12, 19, 3, 5, 2, 3,20,2,10,5,22,4],
+          label: "Flight minutes",
+          data: minutesPerMonth().map(Math.round),
           borderWidth: 1
         }]
       },
@@ -68,7 +107,11 @@ function HomeCtrl($rootScope, $scope, $state, $http, $interval) {
                       },
         scales: {
           y: {
-            beginAtZero: true
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Minutes flown'
+            }
           }
         }
       }
@@ -76,6 +119,10 @@ function HomeCtrl($rootScope, $scope, $state, $http, $interval) {
 
   }, 50);
 
-
-
+  // Leaving the page cancels the downloads still running.
+  $scope.$on('$destroy', function () {
+    stop.resolve();
+    clearTimeout(timer);
+    if (chart) chart.destroy();
+  });
 }

@@ -1,0 +1,70 @@
+<!--
+	This file is part of RB.
+
+	Copyright (C) 2026 XIAPROJECTS SRL
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, version 3.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+	This source is part of the project RB:
+	01 -> Display with Synthetic vision, Autopilot and ADSB
+	02 -> Display with SixPack
+	03 -> Display with Autopilot, ADSB, Radio, Flight Computer
+	04 -> Display with EMS: Engine monitoring system
+	05 -> Display with Stratux BLE Traffic
+	06 -> Display with Android 6.25" 7" 8" 10" 10.2"
+	07 -> Display with Stratux BLE Traffic composed by RB-05 + RB-03 in the same box
+
+	Community edition will be free for all builders and personal use as defined by the licensing model
+	Dual licensing for commercial agreement is available
+	Please join Discord community
+-->
+<div ui-content-for="title">Flight Map</div>
+<div>&nbsp;</div>
+<div class="col-sm-12">
+  <div class="row">
+    <!-- Map first on phones, on the right of the flight list from 768px up. -->
+    <div class="col-sm-8 col-sm-push-4">
+      <div id="map_display"></div>
+      <div id="map_tooltip" class="small"
+        style="background: #ffffff; border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px; white-space: nowrap; pointer-events: none;"></div>
+    </div>
+    <div class="col-sm-4 col-sm-pull-8">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <span class="panel_label">{{settings.deviceId}}</span>
+          <span id="map_progress" class="pull-right text-muted" ng-if="scan.running">
+            <i class="fa fa-spinner fa-spin"></i> Scanning {{scan.scanned}}<span ng-if="scan.logs !== null"> of {{scan.logs}}</span>
+          </span>
+        </div>
+        <div class="panel-body text-danger" ng-if="scan.error">Could not list the flight logs (HTTP {{scan.error}}). Check the device and token in Settings.</div>
+        <div id="map_flights" class="list-group">
+          <label class="list-group-item" ng-repeat="flight in scan.flights | orderBy:'-start'" title="{{flight.file}}"
+            style="margin-bottom: 0; font-weight: normal; cursor: pointer;">
+            <input type="checkbox" ng-model="view.selected[flight.file]" ng-change="toggleFlight(flight)" style="margin-right: 6px;" />
+            <span class="map-swatch"
+              ng-style="{'background-color': view.selected[flight.file] ? (tracks[flight.file].color || '#6f6e69') : 'transparent'}"></span>
+            {{flightLabel(flight)}}
+            <small class="text-muted">{{elapsedMinutes(flight) | number:0}} min</small>
+            <i class="fa fa-spinner fa-spin text-muted map-track-loading" ng-if="tracks[flight.file].loading"></i>
+            <div class="small text-danger" ng-if="tracks[flight.file].error">{{tracks[flight.file].error}}</div>
+          </label>
+          <div class="list-group-item text-muted" ng-if="!scan.running && !scan.error && !scan.flights.length">No flights found</div>
+        </div>
+        <div class="panel-footer small text-muted">
+          Tick the flights to show. The first {{colorCount}} get a color; more are drawn in grey.
+          Point at or tap a track to see its flight. Times are UTC.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

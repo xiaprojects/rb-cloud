@@ -34,12 +34,83 @@
   <div class="panel-group">
     <div class="panel panel-default">
       <div class="panel-heading">
-        <span class="panel_label">Professional version</span>
+        <span class="panel_label">{{settings.deviceId}}</span>
+        <span id="logbook_progress" class="pull-right text-muted" ng-if="scan.running">
+          <i class="fa fa-spinner fa-spin"></i> Scanning {{scan.scanned}}<span ng-if="scan.logs !== null"> of {{scan.logs}}</span>
+        </span>
       </div>
-      <div class="panel-body text-center">
-       This content will be available upon Professional subscription, please join discord channel to have more information: <a href="https://discord.gg/G4u6kjmrUG">https://discord.gg/G4u6kjmrUG</a>
-       <br/>
-       Pilot logbook
+      <div class="panel-body text-danger" ng-if="scan.error">Could not list the flight logs (HTTP {{scan.error}}). Check the device and token in Settings.</div>
+      <div id="logbook_delete_error" class="panel-body text-danger" ng-if="deleteError">{{deleteError}}</div>
+      <div class="table-responsive" ng-if="!scan.error">
+        <table id="logbook_table" class="table table-striped table-condensed" style="margin-bottom: 0;">
+          <thead>
+            <tr>
+              <th>Date<br/><small>UTC</small></th>
+              <th class="hidden-xs">Start<br/><small>UTC</small></th>
+              <th class="hidden-xs">End<br/><small>UTC</small></th>
+              <th class="text-right">Max speed<br/><small>kt</small></th>
+              <th class="text-right">Max vario<br/><small>ft/min</small></th>
+              <th class="text-right">Max G<br/><small>g</small></th>
+              <th class="text-right">Min G<br/><small>g</small></th>
+              <th class="text-right hidden-xs">Alerts<br/><small>shown</small></th>
+              <th ng-if="canDelete"><span class="sr-only">Delete</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-repeat="flight in scan.flights | orderBy:'-start'" title="{{flight.file}}">
+              <td style="white-space: nowrap;">
+                {{flight.start | date:'dd MMM yyyy':'UTC'}}
+                <div class="visible-xs-block text-muted">
+                  {{flight.start | date:'HH:mm':'UTC'}}&ndash;{{flight.end === null ? '?' : (flight.end | date:'HH:mm':'UTC')}}<span ng-if="!flight.landed"> in flight</span>
+                </div>
+                <a class="visible-xs-block logbook-alerts" ng-if="flight.alerts.total" ng-href="#/engineanalisys?file={{flight.file}}" title="{{alertsTitle(flight.alerts)}}">
+                  <span ng-repeat="severity in alertSeverities" ng-if="flight.alerts[severity.key]" ng-class="severity.css" class="logbook-alert-count">
+                    <i class="fa" ng-class="severity.icon" aria-hidden="true"></i>&nbsp;{{flight.alerts[severity.key]}}<span class="sr-only"> {{severity.label}}</span>
+                  </span>
+                  <span class="small" ng-if="flight.alerts.open">&nbsp;{{flight.alerts.open}} open</span>
+                </a>
+              </td>
+              <td class="hidden-xs">{{flight.start | date:'HH:mm':'UTC'}}</td>
+              <td class="hidden-xs" ng-class="{'text-muted': !flight.landed}" title="{{flight.landed ? '' : 'The log ends in flight: time of its last GPS fix'}}">
+                {{flight.end === null ? '&mdash;' : (flight.end | date:'HH:mm':'UTC')}}
+              </td>
+              <td class="text-right">{{flight.maxSpeed | number:0}}</td>
+              <td class="text-right">{{flight.maxVario === null ? '&mdash;' : (flight.maxVario | number:0)}}</td>
+              <td class="text-right">{{flight.maxG === null ? '&mdash;' : (flight.maxG | number:1)}}</td>
+              <td class="text-right">{{flight.minG === null ? '&mdash;' : (flight.minG | number:1)}}</td>
+              <td class="text-right hidden-xs logbook-alerts" style="white-space: nowrap;" title="{{alertsTitle(flight.alerts)}}">
+                <span class="text-muted" ng-if="!flight.alerts">&mdash;</span>
+                <span class="text-muted" ng-if="flight.alerts && !flight.alerts.total">0</span>
+                <a ng-if="flight.alerts.total" ng-href="#/engineanalisys?file={{flight.file}}">
+                  <span ng-repeat="severity in alertSeverities" ng-if="flight.alerts[severity.key]" ng-class="severity.css" class="logbook-alert-count">
+                    <i class="fa" ng-class="severity.icon" aria-hidden="true"></i>&nbsp;{{flight.alerts[severity.key]}}<span class="sr-only"> {{severity.label}}</span>
+                  </span>
+                  <div class="small" ng-if="flight.alerts.open">{{flight.alerts.open}} open</div>
+                </a>
+              </td>
+              <td ng-if="canDelete" class="text-right" style="white-space: nowrap;">
+                <button type="button" class="btn btn-link btn-xs logbook-delete" style="padding: 0 2px;" ng-if="!scan.running"
+                  ng-click="deleteFlight(flight)" ng-disabled="deleting[flight.file]" title="Delete this flight log">
+                  <i class="fa text-danger" ng-class="deleting[flight.file] ? 'fa-spinner fa-spin' : 'fa-trash-o'"></i><span class="sr-only">Delete</span>
+                </button>
+              </td>
+            </tr>
+            <tr ng-if="!scan.running && !scan.error && !scan.flights.length">
+              <td ng-attr-colspan="{{canDelete ? 9 : 8}}" class="text-center text-muted">No flights found</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel-footer small text-muted" ng-if="!scan.running && !scan.error">
+        {{scan.flights.length}} {{scan.flights.length === 1 ? 'flight' : 'flights'}} in {{scan.logs}} flight {{scan.logs === 1 ? 'log' : 'logs'}}.
+        Start and end: the first GPS ground speed above {{speedThreshold}} km/h, and the last time it drops below.
+        A grey end time means the log ends in flight, so it is the last GPS fix.
+        Logs that never go that fast, or whose GPS altitude changes by less than 100 m, are not listed.
+        Alerts: what the RB display showed during the log, by severity
+        (<span ng-repeat="severity in alertSeverities"><i class="fa" ng-class="[severity.icon, severity.css]"></i> {{severity.label | lowercase}}{{$last ? '' : ', '}}</span>);
+        &ldquo;open&rdquo; ones were still active when the log ended. Click a count for the list in Engine Analysis.
+        &mdash;: the log has no alert record (RB firmware logs alerts from November 2026).
+        <span class="text-danger" ng-if="scan.failed.length">{{scan.failed.length}} {{scan.failed.length === 1 ? 'log' : 'logs'}} could not be loaded: {{scan.failed.join(', ')}}.</span>
       </div>
     </div>
   </div>

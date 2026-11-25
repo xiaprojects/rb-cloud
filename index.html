@@ -42,7 +42,8 @@
 	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 	<link rel="stylesheet" href="maui/css/mobile-angular-ui-base.min.css" />
 	<link rel="stylesheet" href="maui/css/mobile-angular-ui-hover.min.css" />
-
+	<link rel="stylesheet" href="css/ol.css" />
+	<link rel="stylesheet" href="css/ol-layerswitcher.css" />
 	<link rel="stylesheet" href="css/main.css" />
 	<script src="maui/js/angular.min.js"></script>
 	<script src="maui/js/angular-ui-router.min.js"></script>
@@ -54,8 +55,16 @@
 	<script src="js/luxon.min.js"></script>
 	<script src="js/chartjs-adapter-luxon.umd.min.js"></script>
 	<script src="plates/js/charts.js"></script>
+	<script src="plates/js/flightlogs.js"></script>
+	<script src="plates/js/alerts.js"></script>
 	<script src="plates/js/settings.js"></script>
 	<script src="plates/js/pro.js"></script>
+	<script src="plates/js/logbook.js"></script>
+	<script src="plates/js/engineanalisys.js"></script>
+	<script src="js/ol.js"></script>
+	<script src="js/olms.js"></script>
+	<script src="js/ol-layerswitcher.js"></script>
+	<script src="plates/js/map.js"></script>
 </head>
 
 <body ng-app="rbcloud" ng-controller="MainCtrl" ui-prevent-touchmove-defaults id="body">
@@ -69,13 +78,15 @@
 							class="fa fa-chevron-right pull-right"></i></a>					
 					<a class="list-group-item" href="#/charts"><i class="fa fa-bar-chart"></i> Charts <i
 							class="fa fa-chevron-right pull-right"></i></a>
+					<a class="list-group-item" href="#/map"><i class="fa fa-map"></i> Flight Map <i
+							class="fa fa-chevron-right pull-right"></i></a>
 					<a class="list-group-item" href="#/logbook"><i class="fa fa-suitcase"></i> Pilot Logbook <i
 							class="fa fa-chevron-right pull-right"></i></a>
 					<a class="list-group-item" href="#/documents"><i class="fa fa-paperclip"></i> Documents <i
 							class="fa fa-chevron-right pull-right"></i></a>
 					<a class="list-group-item" href="#/maintenance"><i class="fa fa-wrench"></i> Maintenance <i
 							class="fa fa-chevron-right pull-right"></i></a>
-					<a class="list-group-item" href="#/engineanalisys"><i class="fa fa-check"></i> Engine Analisys <i
+					<a class="list-group-item" href="#/engineanalisys"><i class="fa fa-check"></i> Engine Analysis <i
 							class="fa fa-chevron-right pull-right"></i></a>
 					<a class="list-group-item" href="#/live"><i class="fa fa-feed"></i> Live Monitoring <i
 							class="fa fa-chevron-right pull-right"></i></a>

@@ -129,7 +129,8 @@ function ChartsCtrl($rootScope, $scope, $state, $http, $interval) {
 
 
   $http.get(URL_GET_FILES+"/"+$scope.settings.deviceId+"?Authorization="+$scope.settings.accessToken).then(function (response) {
-    $scope.files = angular.fromJson(response.data);
+    // Logs deleted from the logbook stay listed, flagged `deleted`, for the aircraft uploader.
+    $scope.files = angular.fromJson(response.data).filter(file => !file.deleted);
   });
 
   $scope.renderChart = function (canvas, file, table, timeField, pivotColumn, selectedColumns, csvText) {
